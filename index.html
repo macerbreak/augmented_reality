@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang=en>
+<head>
+    <title>drop</title>
+    <meta charset=utf-8>
+    <meta name=viewport content=width=device-width,user-scalable=no,minimum-scale=1.0,maximum-scale=1.0>
+</head>
+<body>
+
+<script src=http://mrdoob.github.io/three.js/build/three.min.js></script>
+<script src=https://mrdoob.github.io/three.js/examples/js/libs/stats.min.js ></script>
+<script src="https://aframe.io/releases/0.8.0/aframe.min.js"></script>
+<script src="https://cdn.rawgit.com/jeromeetienne/AR.js/1.6.0/aframe/build/aframe-ar.js"></script>
+
+<script>
+
+    init();
+    animate();
+    function init() {
+        renderer = new THREE.WebGLRenderer({alpha: 1, antialias: true});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        sn = new THREE.Scene();
+        cm = new THREE.PerspectiveCamera(120, window.innerWidth / window.innerHeight, 0.1, 1000);
+        cm.position.set(0, 0, 0);
+        gm = new THREE.ParametricGeometry(myfunc, 100, 100);
+        gm.center();
+        ml = new THREE.MeshNormalMaterial({side: 2, wireframe: false})
+        mh = new THREE.Mesh(gm, ml)
+
+        clock = new THREE.Clock();
+        deltaTime = 0;
+        totalTime = 0;
+
+        arToolkitSource = new THREEx.ArToolkitSource({
+            sourceType : 'webcam',
+        });
+
+        arToolkitSource.init(function onReady(){
+            onResize()
+        });
+
+        // handle resize event
+        window.addEventListener('resize', function(){
+            onResize()
+        });
+
+
+        arToolkitContext = new THREEx.ArToolkitContext({
+            cameraParametersUrl: 'camera.dat',
+            detectionMode: 'mono'
+        });
+
+        arToolkitContext.init( function onCompleted(){
+            cm.projectionMatrix.copy( arToolkitContext.getProjectionMatrix() );
+        });
+
+        markerRoot1 = new THREE.Group();
+        sn.add(markerRoot1);
+
+        let markerControls1 = new THREEx.ArMarkerControls(arToolkitContext, markerRoot1, {
+            type: 'pattern',
+            patternUrl: "pattern.patt",
+        })
+
+        markerRoot1.add( mh );
+
+    }
+    function myfunc(v, u, vector) {
+        a = 0.5
+        b = 1
+        kf = 10
+        u *= kf
+        v *= kf
+        vector.x = a * (b - Math.cos(u)) * Math.sin(u) * Math.cos(v);
+        vector.y = a * (b - Math.cos(u)) * Math.sin(u) * Math.sin(v);
+        vector.z = Math.cos(u);
+        return vector;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        totalTime += deltaTime;
+        update();
+        render();
+        mh.rotation.x += 0.01;
+        mh.rotation.y += 0.01;
+        mh.rotation.z += 0.01;
+    }
+
+    function render()
+    {
+        renderer.render( sn, cm );
+    }
+
+    function update()
+    {
+        if ( arToolkitSource.ready !== false )
+            arToolkitContext.update( arToolkitSource.domElement );
+    }
+
+
+    function onResize()
+    {
+        arToolkitSource.onResize()
+        arToolkitSource.copySizeTo(renderer.domElement)
+        if ( arToolkitContext.arController !== null )
+        {
+            arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)
+        }
+    }
+
+</script>
+</body>
+</html>
